@@ -28,9 +28,6 @@ services:
       OTEL_ENABLED: "false"
       LOG_LEVEL: INFO
       LOG_FORMAT: json
-    depends_on:
-      - db
-      - redis
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"]
@@ -52,9 +49,6 @@ services:
       OTEL_ENABLED: "false"
       LOG_LEVEL: INFO
       LOG_FORMAT: json
-    depends_on:
-      - db
-      - redis
     restart: unless-stopped
 
   db:
