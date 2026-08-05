@@ -1,7 +1,6 @@
 import enum
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import str
 
 
 class AgentStatus(str, enum.Enum):
