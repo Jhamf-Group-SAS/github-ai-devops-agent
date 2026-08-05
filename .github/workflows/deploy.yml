@@ -1,0 +1,93 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: production
+        type: choice
+        options: [production, staging]
+      image_tag:
+        description: Image tag to deploy (default: latest)
+        required: false
+        default: latest
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      packages: read
+      deployments: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image tag
+        id: image
+        run: |
+          TAG="${{ inputs.image_tag }}"
+          if [ -z "$TAG" ] || [ "$TAG" = "latest" ]; then
+            TAG="sha-$(git rev-parse --short HEAD)"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "full=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy via Portainer webhook
+        if: vars.DEPLOY_TARGET == 'portainer'
+        run: |
+          curl -sf -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{"image": "${{ steps.image.outputs.full }}"}'
+
+      - name: Deploy via kubectl
+        if: vars.DEPLOY_TARGET == 'kubernetes'
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG }}
+        run: |
+          echo "$KUBECONFIG_DATA" | base64 -d > /tmp/kubeconfig
+          kubectl --kubeconfig=/tmp/kubeconfig set image deployment/github-ai-devops-agent \
+            api=${{ steps.image.outputs.full }} \
+            worker=${{ steps.image.outputs.full }}
+          kubectl --kubeconfig=/tmp/kubeconfig rollout status deployment/github-ai-devops-agent --timeout=120s
+          rm /tmp/kubeconfig
+
+      - name: Create GitHub deployment status
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha,
+              environment: '${{ inputs.environment }}',
+              auto_merge: false,
+              required_contexts: [],
+            });
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: deployment.data.id,
+              state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
+              description: 'Deployed ${{ steps.image.outputs.tag }}',
+            });

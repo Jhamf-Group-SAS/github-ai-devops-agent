@@ -1,0 +1,12 @@
+-r requirements.txt
+
+# Linting & formatting
+ruff==0.6.9
+
+# Type checking
+mypy==1.11.2
+types-redis==4.6.0.20241004
+
+# Testing extras
+pytest-anyio==0.0.0
+anyio[trio]==4.6.2
