@@ -1,6 +1,8 @@
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from workers.orchestrator import process_webhook_event, AGENT_DISPATCH
+
+from workers.orchestrator import AGENT_DISPATCH, process_webhook_event
 
 
 @pytest.fixture(autouse=True)

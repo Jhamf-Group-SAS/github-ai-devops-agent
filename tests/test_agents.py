@@ -1,27 +1,26 @@
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from agents.base import AgentStatus, Finding
-from agents.security import SecurityAgent, SECRET_PATTERNS
+from unittest.mock import MagicMock
 
+import pytest
+
+from agents.base import AgentStatus, Finding
+from agents.security import SECRET_PATTERNS
 
 # ---------------------------------------------------------------------------
 # Security agent — secret scanning (no external calls needed)
 # ---------------------------------------------------------------------------
 
+
 def test_secret_patterns_detect_aws_key():
-    import re
     aws_pattern = next(p for _, cat, p in SECRET_PATTERNS if cat == "aws_access_key")
     assert aws_pattern.search("AKIAIOSFODNN7EXAMPLE") is not None
 
 
 def test_secret_patterns_detect_github_token():
-    import re
     gh_pattern = next(p for _, cat, p in SECRET_PATTERNS if cat == "github_token")
     assert gh_pattern.search("ghs_abcdefghijklmnopqrstuvwxyz012345") is not None
 
 
 def test_secret_patterns_no_false_positive_on_placeholder():
-    import re
     aws_pattern = next(p for _, cat, p in SECRET_PATTERNS if cat == "aws_access_key")
     assert aws_pattern.search("YOUR_AWS_ACCESS_KEY") is None
 
@@ -30,9 +29,11 @@ def test_secret_patterns_no_false_positive_on_placeholder():
 # Architecture agent — skip logic
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.anyio
 async def test_architecture_agent_skips_non_pr_events():
     from agents.architecture import ArchitectureAgent
+
     agent = ArchitectureAgent()
     result = await agent.run(event_type="push", payload={}, installation_id=1)
     assert result.status == AgentStatus.SKIPPED
@@ -41,6 +42,7 @@ async def test_architecture_agent_skips_non_pr_events():
 @pytest.mark.anyio
 async def test_architecture_agent_skips_closed_pr():
     from agents.architecture import ArchitectureAgent
+
     agent = ArchitectureAgent()
     result = await agent.run(
         event_type="pull_request",
@@ -54,13 +56,18 @@ async def test_architecture_agent_skips_closed_pr():
 # Deploy agent — skip logic
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.anyio
 async def test_deploy_agent_skips_non_default_branch():
     from agents.deploy import DeployAgent
+
     agent = DeployAgent()
     result = await agent.run(
         event_type="push",
-        payload={"ref": "refs/heads/feature-x", "repository": {"default_branch": "main", "full_name": "org/repo"}},
+        payload={
+            "ref": "refs/heads/feature-x",
+            "repository": {"default_branch": "main", "full_name": "org/repo"},
+        },
         installation_id=1,
     )
     assert result.status == AgentStatus.SKIPPED
@@ -69,6 +76,7 @@ async def test_deploy_agent_skips_non_default_branch():
 @pytest.mark.anyio
 async def test_deploy_agent_skips_non_push():
     from agents.deploy import DeployAgent
+
     agent = DeployAgent()
     result = await agent.run(event_type="pull_request", payload={}, installation_id=1)
     assert result.status == AgentStatus.SKIPPED
@@ -78,6 +86,7 @@ async def test_deploy_agent_skips_non_push():
 # AgentResult helpers
 # ---------------------------------------------------------------------------
 
+
 def test_agent_result_counts_severity():
     result = MagicMock()
     result.findings = [
@@ -86,6 +95,7 @@ def test_agent_result_counts_severity():
         Finding("low", "smell", "Long method"),
     ]
     from agents.base import AgentResult, AgentStatus
+
     r = AgentResult(agent="test", status=AgentStatus.SUCCESS, findings=result.findings)
     assert r.critical_count == 1
     assert r.high_count == 1

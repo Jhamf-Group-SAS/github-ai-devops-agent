@@ -2,7 +2,9 @@
 Thin wrapper around the Anthropic SDK.
 All agents go through here — one place to swap models or add rate limiting.
 """
+
 from functools import lru_cache
+
 import anthropic
 
 DEFAULT_MODEL = "claude-sonnet-4-6"

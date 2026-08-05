@@ -1,6 +1,7 @@
 import structlog
-from agents.base import BaseAgent, AgentResult, AgentStatus
+
 from agents.ai_client import ask
+from agents.base import AgentResult, AgentStatus, BaseAgent
 from agents.github_client import GitHubRepoClient
 from api.services.github_auth import get_github_auth_service
 
@@ -54,7 +55,12 @@ class DocsAgent(BaseAgent):
             changed_files = await gh.get_pr_files(pr_number)
 
             # Only regenerate README if structural files changed
-            structural_files = {"api/main.py", "docker-compose.yml", "requirements.txt", "pyproject.toml"}
+            structural_files = {
+                "api/main.py",
+                "docker-compose.yml",
+                "requirements.txt",
+                "pyproject.toml",
+            }
             needs_readme = any(f in structural_files for f in changed_files)
 
             if needs_readme:
@@ -70,8 +76,8 @@ class DocsAgent(BaseAgent):
                 branch_name = f"agent/docs-{pr_number}"
                 try:
                     await gh.create_branch(branch_name, from_ref=head_branch)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("Branch may already exist", error=str(exc))
 
                 await gh.create_or_update_file(
                     path="README.md",

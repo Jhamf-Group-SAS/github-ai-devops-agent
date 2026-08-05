@@ -1,15 +1,16 @@
-import structlog
 from contextlib import asynccontextmanager
+
+import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
+from api.cache import close_redis, get_redis_client
 from api.config import get_settings
 from api.logging_config import configure_logging
-from api.telemetry import configure_telemetry, instrument_app
-from api.cache import get_redis_client, close_redis
 from api.metrics import get_metrics_output
-from api.routers import webhook, projects
+from api.routers import projects, webhook
+from api.telemetry import configure_telemetry, instrument_app
 
 settings = get_settings()
 configure_logging(settings)

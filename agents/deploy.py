@@ -1,6 +1,7 @@
-import structlog
 import httpx
-from agents.base import BaseAgent, AgentResult, AgentStatus
+import structlog
+
+from agents.base import AgentResult, AgentStatus, BaseAgent
 from api.services.github_auth import get_github_auth_service
 
 logger = structlog.get_logger(__name__)
@@ -46,7 +47,9 @@ class DeployAgent(BaseAgent):
                     return self._skip("deploy.yml workflow not found — skipping")
                 r.raise_for_status()
 
-            logger.info("Deploy workflow triggered", repo=repo.get("full_name"), branch=default_branch)
+            logger.info(
+                "Deploy workflow triggered", repo=repo.get("full_name"), branch=default_branch
+            )
             return self._result(AgentStatus.SUCCESS, actions=["triggered_deploy_workflow"])
 
         except Exception as exc:

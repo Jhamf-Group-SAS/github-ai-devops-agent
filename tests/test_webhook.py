@@ -1,10 +1,10 @@
 import hashlib
 import hmac
 import json
-import pytest
-from httpx import AsyncClient, ASGITransport
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 
+import pytest
+from httpx import ASGITransport, AsyncClient
 
 WEBHOOK_SECRET = "test-secret"
 PAYLOAD = json.dumps({"action": "opened", "number": 1}).encode()
@@ -17,9 +17,11 @@ def _sign(payload: bytes, secret: str) -> str:
 
 @pytest.fixture(autouse=True)
 def patch_infra():
-    with patch("api.cache.get_redis_client") as mock_redis_factory, \
-         patch("api.telemetry.configure_telemetry"), \
-         patch("api.telemetry.instrument_app"):
+    with (
+        patch("api.cache.get_redis_client") as mock_redis_factory,
+        patch("api.telemetry.configure_telemetry"),
+        patch("api.telemetry.instrument_app"),
+    ):
         mock_redis = AsyncMock()
         mock_redis.ping = AsyncMock(return_value=True)
         mock_redis_factory.return_value = mock_redis
@@ -34,12 +36,12 @@ def override_secret(monkeypatch):
 @pytest.mark.anyio
 async def test_webhook_accepts_valid_signature(override_secret):
     from api.config import get_settings
+
     get_settings.cache_clear()
 
     from api.main import app
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as client:
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(
             "/webhook",
             content=PAYLOAD,
@@ -57,12 +59,12 @@ async def test_webhook_accepts_valid_signature(override_secret):
 @pytest.mark.anyio
 async def test_webhook_rejects_invalid_signature(override_secret):
     from api.config import get_settings
+
     get_settings.cache_clear()
 
     from api.main import app
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as client:
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(
             "/webhook",
             content=PAYLOAD,
@@ -78,12 +80,12 @@ async def test_webhook_rejects_invalid_signature(override_secret):
 @pytest.mark.anyio
 async def test_webhook_rejects_missing_signature(override_secret):
     from api.config import get_settings
+
     get_settings.cache_clear()
 
     from api.main import app
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as client:
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(
             "/webhook",
             content=PAYLOAD,

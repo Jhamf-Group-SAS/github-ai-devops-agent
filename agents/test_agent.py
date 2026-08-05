@@ -1,7 +1,9 @@
 import json
+
 import structlog
-from agents.base import BaseAgent, AgentResult, AgentStatus, Finding
+
 from agents.ai_client import ask
+from agents.base import AgentResult, AgentStatus, BaseAgent, Finding
 from agents.github_client import GitHubRepoClient
 from api.services.github_auth import get_github_auth_service
 
@@ -58,7 +60,9 @@ class TestAgent(BaseAgent):
             gh = GitHubRepoClient(token, owner, repo_name)
 
             changed_files = await gh.get_pr_files(pr_number)
-            python_files = [f for f in changed_files if f.endswith(".py") and not f.startswith("test")]
+            python_files = [
+                f for f in changed_files if f.endswith(".py") and not f.startswith("test")
+            ]
 
             if not python_files:
                 return self._skip("no Python source files changed")
@@ -93,13 +97,15 @@ class TestAgent(BaseAgent):
                 coverage_data = json.loads(coverage_response)
                 estimated = coverage_data.get("estimated_coverage", 0)
                 for gap in coverage_data.get("coverage_gaps", []):
-                    findings.append(Finding(
-                        severity=gap.get("severity", "medium"),
-                        category="coverage",
-                        message=f"Missing tests for {gap.get('symbol')} in {gap.get('file')}",
-                        file=gap.get("file"),
-                        suggestion=gap.get("reason"),
-                    ))
+                    findings.append(
+                        Finding(
+                            severity=gap.get("severity", "medium"),
+                            category="coverage",
+                            message=f"Missing tests for {gap.get('symbol')} in {gap.get('file')}",
+                            file=gap.get("file"),
+                            suggestion=gap.get("reason"),
+                        )
+                    )
             except json.JSONDecodeError:
                 estimated = 0
 
@@ -125,8 +131,8 @@ class TestAgent(BaseAgent):
 
                     try:
                         await gh.create_branch(branch_name, from_ref=head_branch)
-                    except Exception:
-                        pass  # branch may already exist
+                    except Exception as exc:
+                        logger.debug("Branch may already exist", error=str(exc))
 
                     await gh.create_or_update_file(
                         path=test_path,
@@ -154,7 +160,9 @@ class TestAgent(BaseAgent):
             )
 
             logger.info("Test analysis complete", gaps=len(findings), coverage=estimated)
-            return self._result(AgentStatus.SUCCESS, findings=findings, actions=actions, pr_url=pr_url)
+            return self._result(
+                AgentStatus.SUCCESS, findings=findings, actions=actions, pr_url=pr_url
+            )
 
         except Exception as exc:
             logger.error("Test agent failed", error=str(exc))

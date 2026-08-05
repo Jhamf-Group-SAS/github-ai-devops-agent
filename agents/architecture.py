@@ -1,6 +1,7 @@
 import structlog
-from agents.base import BaseAgent, AgentResult, AgentStatus, Finding
+
 from agents.ai_client import ask
+from agents.base import AgentResult, AgentStatus, BaseAgent, Finding
 from agents.github_client import GitHubRepoClient
 from api.services.github_auth import get_github_auth_service
 
@@ -52,7 +53,9 @@ class ArchitectureAgent(BaseAgent):
             gh = GitHubRepoClient(token, owner, repo_name)
 
             changed_files = await gh.get_pr_files(pr_number)
-            code_files = [f for f in changed_files if f.endswith((".py", ".ts", ".js", ".go", ".java"))]
+            code_files = [
+                f for f in changed_files if f.endswith((".py", ".ts", ".js", ".go", ".java"))
+            ]
 
             if not code_files:
                 return self._skip("no analyzable code files in PR")
@@ -66,6 +69,7 @@ class ArchitectureAgent(BaseAgent):
                     code_context += f"\n\n--- {path} ---\n" + "\n".join(lines)
 
             import json
+
             response = await ask(SYSTEM_PROMPT, f"Analyze these files:\n{code_context}")
 
             try:
@@ -93,11 +97,15 @@ class ArchitectureAgent(BaseAgent):
                 head_sha=head_sha,
                 conclusion=conclusion,
                 summary=summary,
-                details="\n".join(f"- [{f.severity.upper()}] {f.file}: {f.message}" for f in findings),
+                details="\n".join(
+                    f"- [{f.severity.upper()}] {f.file}: {f.message}" for f in findings
+                ),
             )
 
             logger.info("Architecture analysis complete", findings=len(findings), pr=pr_number)
-            return self._result(AgentStatus.SUCCESS, findings=findings, actions=["posted_check_run"])
+            return self._result(
+                AgentStatus.SUCCESS, findings=findings, actions=["posted_check_run"]
+            )
 
         except Exception as exc:
             logger.error("Architecture agent failed", error=str(exc))

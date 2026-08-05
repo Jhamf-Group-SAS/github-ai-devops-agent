@@ -1,7 +1,7 @@
 """
 Queue helpers — thin wrapper around arq to enqueue orchestrator jobs.
 """
-import json
+
 import structlog
 from arq import create_pool
 from arq.connections import RedisSettings

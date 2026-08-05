@@ -1,8 +1,10 @@
-import re
 import json
+import re
+
 import structlog
-from agents.base import BaseAgent, AgentResult, AgentStatus, Finding
+
 from agents.ai_client import ask
+from agents.base import AgentResult, AgentStatus, BaseAgent, Finding
 from agents.github_client import GitHubRepoClient
 from api.services.github_auth import get_github_auth_service
 
@@ -10,13 +12,17 @@ logger = structlog.get_logger(__name__)
 
 # Compiled secret patterns — no AI needed for known signatures
 SECRET_PATTERNS: list[tuple[str, str, re.Pattern]] = [
-    ("critical", "aws_access_key",     re.compile(r"AKIA[0-9A-Z]{16}")),
-    ("critical", "private_key",        re.compile(r"-----BEGIN (?:RSA |EC )?PRIVATE KEY-----")),
-    ("critical", "github_token",       re.compile(r"gh[pousr]_[A-Za-z0-9_]{36,}")),
-    ("high",     "generic_password",   re.compile(r'(?i)password\s*=\s*["\'][^"\']{8,}["\']')),
-    ("high",     "generic_api_key",    re.compile(r'(?i)api[_-]?key\s*=\s*["\'][^"\']{16,}["\']')),
-    ("medium",   "slack_webhook",      re.compile(r"https://hooks\.slack\.com/services/T[A-Z0-9]+/B[A-Z0-9]+/")),
-    ("medium",   "stripe_key",         re.compile(r"sk_live_[0-9a-zA-Z]{24,}")),
+    ("critical", "aws_access_key", re.compile(r"AKIA[0-9A-Z]{16}")),
+    ("critical", "private_key", re.compile(r"-----BEGIN (?:RSA |EC )?PRIVATE KEY-----")),
+    ("critical", "github_token", re.compile(r"gh[pousr]_[A-Za-z0-9_]{36,}")),
+    ("high", "generic_password", re.compile(r'(?i)password\s*=\s*["\'][^"\']{8,}["\']')),
+    ("high", "generic_api_key", re.compile(r'(?i)api[_-]?key\s*=\s*["\'][^"\']{16,}["\']')),
+    (
+        "medium",
+        "slack_webhook",
+        re.compile(r"https://hooks\.slack\.com/services/T[A-Z0-9]+/B[A-Z0-9]+/"),
+    ),
+    ("medium", "stripe_key", re.compile(r"sk_live_[0-9a-zA-Z]{24,}")),
 ]
 
 DEPENDENCY_SYSTEM = """\
@@ -74,15 +80,17 @@ class SecurityAgent(BaseAgent):
                     continue
                 for severity, category, pattern in SECRET_PATTERNS:
                     for match in pattern.finditer(repo_file.content):
-                        line_num = repo_file.content[:match.start()].count("\n") + 1
-                        findings.append(Finding(
-                            severity=severity,
-                            category="secret",
-                            message=f"Potential {category} detected",
-                            file=path,
-                            line=line_num,
-                            suggestion="Remove secret and rotate immediately. Use environment variables.",
-                        ))
+                        line_num = repo_file.content[: match.start()].count("\n") + 1
+                        findings.append(
+                            Finding(
+                                severity=severity,
+                                category="secret",
+                                message=f"Potential {category} detected",
+                                file=path,
+                                line=line_num,
+                                suggestion="Remove secret and rotate immediately. Use environment variables.",
+                            )
+                        )
 
             # 2. Dependency CVE check via Claude
             req_file = await gh.get_file("requirements.txt", ref=head_sha)
@@ -94,13 +102,15 @@ class SecurityAgent(BaseAgent):
                 try:
                     dep_data = json.loads(response)
                     for f in dep_data.get("findings", []):
-                        findings.append(Finding(
-                            severity=f.get("severity", "medium"),
-                            category="cve",
-                            message=f"{f.get('package')} {f.get('version')}: {f.get('message')}",
-                            file=req_file.path,
-                            suggestion=f.get("cve"),
-                        ))
+                        findings.append(
+                            Finding(
+                                severity=f.get("severity", "medium"),
+                                category="cve",
+                                message=f"{f.get('package')} {f.get('version')}: {f.get('message')}",
+                                file=req_file.path,
+                                suggestion=f.get("cve"),
+                            )
+                        )
                 except json.JSONDecodeError:
                     pass
 
@@ -121,7 +131,9 @@ class SecurityAgent(BaseAgent):
                 )
 
             logger.info("Security scan complete", findings=len(findings), critical=critical)
-            return self._result(AgentStatus.SUCCESS, findings=findings, actions=["secret_scan", "dependency_check"])
+            return self._result(
+                AgentStatus.SUCCESS, findings=findings, actions=["secret_scan", "dependency_check"]
+            )
 
         except Exception as exc:
             logger.error("Security agent failed", error=str(exc))

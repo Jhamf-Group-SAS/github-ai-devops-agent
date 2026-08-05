@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.database import get_db
 from api.models.repository import Repository
-from api.schemas.repository import RepositoryOut, RepositoryCreate
+from api.schemas.repository import RepositoryCreate, RepositoryOut
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -19,7 +19,7 @@ async def list_projects(
 ) -> list[Repository]:
     result = await db.execute(
         select(Repository)
-        .where(Repository.is_active == True)
+        .where(Repository.is_active.is_(True))
         .offset(skip)
         .limit(limit)
         .order_by(Repository.created_at.desc())
@@ -32,9 +32,7 @@ async def get_project(
     project_id: int,
     db: AsyncSession = Depends(get_db),
 ) -> Repository:
-    result = await db.execute(
-        select(Repository).where(Repository.id == project_id)
-    )
+    result = await db.execute(select(Repository).where(Repository.id == project_id))
     repo = result.scalar_one_or_none()
     if not repo:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
@@ -59,9 +57,7 @@ async def deactivate_project(
     project_id: int,
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    result = await db.execute(
-        select(Repository).where(Repository.id == project_id)
-    )
+    result = await db.execute(select(Repository).where(Repository.id == project_id))
     repo = result.scalar_one_or_none()
     if not repo:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")

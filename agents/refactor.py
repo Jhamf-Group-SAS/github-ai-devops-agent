@@ -1,7 +1,9 @@
 import json
+
 import structlog
-from agents.base import BaseAgent, AgentResult, AgentStatus, Finding
+
 from agents.ai_client import ask
+from agents.base import AgentResult, AgentStatus, BaseAgent, Finding
 from agents.github_client import GitHubRepoClient
 from api.services.github_auth import get_github_auth_service
 
@@ -50,7 +52,8 @@ class RefactorAgent(BaseAgent):
 
             changed_files = await gh.get_pr_files(pr_number)
             python_files = [
-                f for f in changed_files
+                f
+                for f in changed_files
                 if f.endswith(".py") and not f.startswith("test") and "migration" not in f
             ]
 
@@ -82,8 +85,8 @@ class RefactorAgent(BaseAgent):
                         branch_name = f"agent/refactor-{pr_number}"
                         try:
                             await gh.create_branch(branch_name, from_ref=head_branch)
-                        except Exception:
-                            pass
+                        except Exception as exc:
+                            logger.debug("Branch may already exist", error=str(exc))
 
                         await gh.create_or_update_file(
                             path=path,
@@ -96,24 +99,28 @@ class RefactorAgent(BaseAgent):
                         if not pr_url:
                             pr_url = await gh.create_pull_request(
                                 title=f"refactor: suggestions for PR #{pr_number}",
-                                body=f"Refactoring suggestions by Refactor Agent.\n\nChanges:\n" +
-                                     "\n".join(f"- {c}" for c in changes),
+                                body="Refactoring suggestions by Refactor Agent.\n\nChanges:\n"
+                                + "\n".join(f"- {c}" for c in changes),
                                 head=branch_name,
                                 base=head_branch,
                             )
                             actions.append("created_refactor_pr")
 
                         for change in changes:
-                            findings.append(Finding(
-                                severity="low",
-                                category="refactor",
-                                message=change,
-                                file=path,
-                            ))
+                            findings.append(
+                                Finding(
+                                    severity="low",
+                                    category="refactor",
+                                    message=change,
+                                    file=path,
+                                )
+                            )
                 break
 
             logger.info("Refactor analysis complete", findings=len(findings))
-            return self._result(AgentStatus.SUCCESS, findings=findings, actions=actions, pr_url=pr_url)
+            return self._result(
+                AgentStatus.SUCCESS, findings=findings, actions=actions, pr_url=pr_url
+            )
 
         except Exception as exc:
             logger.error("Refactor agent failed", error=str(exc))

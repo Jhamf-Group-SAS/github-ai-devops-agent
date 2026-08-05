@@ -1,5 +1,7 @@
 from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict
+
 from api.models.job import JobState
 
 

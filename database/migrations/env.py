@@ -3,17 +3,16 @@ import os
 import sys
 from logging.config import fileConfig
 
+from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-
-from alembic import context
 
 # Make sure api package is importable
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from api.database import Base
-from api.models import organization, installation, repository  # noqa: F401 — register models
+from api.models import installation, organization, repository  # noqa: F401 — register models
 
 config = context.config
 
@@ -24,9 +23,7 @@ target_metadata = Base.metadata
 
 
 def get_url() -> str:
-    return os.environ.get("DATABASE_URL", "").replace(
-        "postgresql+asyncpg://", "postgresql://"
-    )
+    return os.environ.get("DATABASE_URL", "").replace("postgresql+asyncpg://", "postgresql://")
 
 
 def run_migrations_offline() -> None:

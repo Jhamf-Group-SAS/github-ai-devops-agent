@@ -4,23 +4,23 @@ arq worker — receives webhook events and dispatches to agent handlers.
 Run with:
     arq workers.orchestrator.WorkerSettings
 """
-import json
+
+from datetime import UTC, datetime
+
 import structlog
-from datetime import datetime, timezone
 from arq import cron
 from arq.connections import RedisSettings
 
-from api.config import get_settings
-from api.database import AsyncSessionLocal
-from api.models.job import Job, JobState
-from api.metrics import webhook_events_total, active_jobs, agent_runs_total
 from agents.architecture import ArchitectureAgent
+from agents.base import BaseAgent
+from agents.deploy import DeployAgent
+from agents.docs import DocsAgent
+from agents.refactor import RefactorAgent
 from agents.security import SecurityAgent
 from agents.test_agent import TestAgent
-from agents.refactor import RefactorAgent
-from agents.docs import DocsAgent
-from agents.deploy import DeployAgent
-from agents.base import BaseAgent
+from api.database import AsyncSessionLocal
+from api.metrics import active_jobs, agent_runs_total, webhook_events_total
+from api.models.job import Job, JobState
 
 logger = structlog.get_logger(__name__)
 
@@ -58,7 +58,7 @@ async def _update_job_state(
     started: bool = False,
     completed: bool = False,
 ) -> None:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     async with AsyncSessionLocal() as session:
         job = await session.get(Job, job_id)
         if not job:
@@ -139,23 +139,23 @@ async def process_webhook_event(
 # Scheduled tasks
 # ---------------------------------------------------------------------------
 
+
 async def cleanup_old_jobs(ctx: dict) -> None:
     """Mark stale RUNNING jobs as FAILED (dead worker recovery)."""
     from datetime import timedelta
+
     from sqlalchemy import select
 
-    threshold = datetime.now(timezone.utc) - timedelta(hours=1)
+    threshold = datetime.now(UTC) - timedelta(hours=1)
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            select(Job)
-            .where(Job.state == JobState.RUNNING)
-            .where(Job.started_at < threshold)
+            select(Job).where(Job.state == JobState.RUNNING).where(Job.started_at < threshold)
         )
         stale = result.scalars().all()
         for job in stale:
             job.state = JobState.FAILED
             job.error_message = "Timed out — worker likely crashed"
-            job.completed_at = datetime.now(timezone.utc)
+            job.completed_at = datetime.now(UTC)
         if stale:
             await session.commit()
             logger.warning("Stale jobs recovered", count=len(stale))
@@ -165,16 +165,16 @@ async def cleanup_old_jobs(ctx: dict) -> None:
 # arq WorkerSettings
 # ---------------------------------------------------------------------------
 
+
 def _get_redis_settings() -> RedisSettings:
     from workers.queue import _redis_settings
+
     return _redis_settings()
 
 
 class WorkerSettings:
     functions = [process_webhook_event]
-    cron_jobs = [
-        cron(cleanup_old_jobs, minute={0, 30})
-    ]
+    cron_jobs = [cron(cleanup_old_jobs, minute={0, 30})]
     max_jobs = 10
     job_timeout = 300
     max_tries = 3

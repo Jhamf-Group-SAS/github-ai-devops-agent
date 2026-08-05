@@ -1,4 +1,5 @@
 from redis.asyncio import Redis, from_url
+
 from api.config import get_settings
 
 _redis: Redis | None = None

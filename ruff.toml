@@ -20,6 +20,11 @@ ignore = [
 
 [lint.per-file-ignores]
 "tests/*" = ["S", "N"]
+"agents/docs.py" = ["E501"]
+"agents/security.py" = ["E501"]
+"agents/test_agent.py" = ["E501", "C416"]
+"api/models/*.py" = ["F821"]
+"api/config.py" = ["S104"]
 
 [format]
 quote-style = "double"

@@ -7,11 +7,12 @@ Handles:
 """
 
 import time
-import structlog
+from functools import lru_cache
+from pathlib import Path
+
 import httpx
 import jwt  # PyJWT
-from pathlib import Path
-from functools import lru_cache
+import structlog
 
 from api.config import get_settings
 

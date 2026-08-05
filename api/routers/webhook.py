@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+
 import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.responses import JSONResponse
@@ -16,7 +17,13 @@ router = APIRouter(prefix="/webhook", tags=["github"])
 settings = get_settings()
 
 # Events that trigger agent processing
-PROCESSABLE_EVENTS = {"pull_request", "push", "check_run", "installation", "installation_repositories"}
+PROCESSABLE_EVENTS = {
+    "pull_request",
+    "push",
+    "check_run",
+    "installation",
+    "installation_repositories",
+}
 
 
 def _verify_signature(payload: bytes, signature_header: str | None) -> None:
@@ -24,9 +31,13 @@ def _verify_signature(payload: bytes, signature_header: str | None) -> None:
         logger.warning("Webhook secret not configured — skipping signature check")
         return
     if not signature_header:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing X-Hub-Signature-256 header")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing X-Hub-Signature-256 header"
+        )
     if not signature_header.startswith("sha256="):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature format")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature format"
+        )
 
     expected = hmac.new(
         settings.github_webhook_secret.encode(), payload, hashlib.sha256
@@ -82,6 +93,7 @@ async def receive_webhook(
     # Enqueue for async processing
     try:
         from workers.queue import enqueue_webhook_event
+
         arq_id = await enqueue_webhook_event(
             event_type=event,
             delivery_id=delivery,

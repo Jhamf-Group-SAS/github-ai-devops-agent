@@ -1,7 +1,7 @@
+import enum
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import str, auto
-import enum
+from enum import str
 
 
 class AgentStatus(str, enum.Enum):
@@ -12,8 +12,8 @@ class AgentStatus(str, enum.Enum):
 
 @dataclass
 class Finding:
-    severity: str          # critical | high | medium | low | info
-    category: str          # secret | cve | smell | coverage | etc.
+    severity: str  # critical | high | medium | low | info
+    category: str  # secret | cve | smell | coverage | etc.
     message: str
     file: str | None = None
     line: int | None = None
@@ -55,4 +55,6 @@ class BaseAgent(ABC):
         return AgentResult(agent=self.name, status=status, **kwargs)
 
     def _skip(self, reason: str = "") -> AgentResult:
-        return AgentResult(agent=self.name, status=AgentStatus.SKIPPED, actions=[reason] if reason else [])
+        return AgentResult(
+            agent=self.name, status=AgentStatus.SKIPPED, actions=[reason] if reason else []
+        )

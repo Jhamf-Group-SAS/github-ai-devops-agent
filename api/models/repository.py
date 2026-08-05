@@ -1,5 +1,6 @@
 from sqlalchemy import BigInteger, Boolean, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from api.database import Base
 from api.models.base import TimestampMixin
 

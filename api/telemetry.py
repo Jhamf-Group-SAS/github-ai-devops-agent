@@ -1,11 +1,11 @@
 import structlog
 from opentelemetry import trace
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.redis import RedisInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.sdk.resources import Resource, SERVICE_NAME
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from opentelemetry.instrumentation.redis import RedisInstrumentor
 
 logger = structlog.get_logger(__name__)
 
@@ -20,6 +20,7 @@ def configure_telemetry(service_name: str, otlp_endpoint: str, enabled: bool) ->
 
     try:
         from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+
         exporter = OTLPSpanExporter(endpoint=otlp_endpoint, insecure=True)
         provider.add_span_processor(BatchSpanProcessor(exporter))
         logger.info("OTLP exporter configured", endpoint=otlp_endpoint)

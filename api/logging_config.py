@@ -1,6 +1,8 @@
 import logging
 import sys
+
 import structlog
+
 from api.config import Settings
 
 
@@ -21,7 +23,8 @@ def configure_logging(settings: Settings) -> None:
         renderer = structlog.dev.ConsoleRenderer(colors=True)
 
     structlog.configure(
-        processors=shared_processors + [
+        processors=shared_processors
+        + [
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
         wrapper_class=structlog.stdlib.BoundLogger,

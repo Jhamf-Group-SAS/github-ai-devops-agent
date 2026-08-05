@@ -2,11 +2,12 @@
 GitHub API helpers for agents.
 All operations require an installation access token.
 """
+
 import base64
-import json
-import structlog
-import httpx
 from dataclasses import dataclass
+
+import httpx
+import structlog
 
 logger = structlog.get_logger(__name__)
 
@@ -82,7 +83,7 @@ class GitHubRepoClient:
         # Get SHA of from_ref
         async with httpx.AsyncClient() as client:
             r = await client.get(
-                f"{self._base}/git/ref/heads/{from_ref.lstrip('refs/heads/')}",
+                f"{self._base}/git/ref/heads/{from_ref.removeprefix('refs/heads/')}",
                 headers=self._headers(),
                 timeout=10,
             )
@@ -120,9 +121,7 @@ class GitHubRepoClient:
             )
             r.raise_for_status()
 
-    async def create_pull_request(
-        self, title: str, body: str, head: str, base: str
-    ) -> str:
+    async def create_pull_request(self, title: str, body: str, head: str, base: str) -> str:
         async with httpx.AsyncClient() as client:
             r = await client.post(
                 f"{self._base}/pulls",
