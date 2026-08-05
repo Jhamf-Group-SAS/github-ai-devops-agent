@@ -13,8 +13,20 @@
 services:
   api:
     image: ghcr.io/jhamf-group-sas/github-ai-devops-agent:${IMAGE_TAG:-latest}
-    ports:
-      - "8000:8000"
+    networks:
+      - jhamfstack
+      - internal
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.devops_api.rule=Host(`agentai.jhamf.com`)
+      - traefik.http.routers.devops_api.entrypoints=websecure
+      - traefik.http.routers.devops_api.tls.certresolver=letsencryptresolver
+      - traefik.http.routers.devops_api.priority=1
+      - traefik.http.routers.devops_api.service=devops_api
+      - traefik.http.services.devops_api.loadbalancer.server.port=8000
+      - traefik.http.services.devops_api.loadbalancer.passHostHeader=true
+      - traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=https
+      - traefik.http.routers.devops_api.middlewares=sslheader
     environment:
       APP_ENV: production
       APP_DEBUG: "false"
@@ -38,6 +50,8 @@ services:
   worker:
     image: ghcr.io/jhamf-group-sas/github-ai-devops-agent:${IMAGE_TAG:-latest}
     command: arq workers.orchestrator.WorkerSettings
+    networks:
+      - internal
     environment:
       APP_ENV: production
       DATABASE_URL: postgresql+asyncpg://devops:${POSTGRES_PASSWORD}@db:5432/devops_agent
@@ -53,6 +67,8 @@ services:
 
   db:
     image: postgres:16-alpine
+    networks:
+      - internal
     environment:
       POSTGRES_DB: devops_agent
       POSTGRES_USER: devops
@@ -68,6 +84,8 @@ services:
 
   redis:
     image: redis:7-alpine
+    networks:
+      - internal
     volumes:
       - redis_data:/data
     healthcheck:
@@ -80,3 +98,9 @@ services:
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  jhamfstack:
+    external: true
+  internal:
+    driver: bridge
