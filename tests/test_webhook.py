@@ -34,7 +34,9 @@ def patch_infra():
         patch("api.cache.get_redis_client") as mock_redis_factory,
         patch("api.telemetry.configure_telemetry"),
         patch("api.telemetry.instrument_app"),
-        patch("workers.queue.enqueue_webhook_event", new_callable=AsyncMock, return_value="arq-123"),
+        patch(
+            "workers.queue.enqueue_webhook_event", new_callable=AsyncMock, return_value="arq-123"
+        ),
     ):
         mock_redis = AsyncMock()
         mock_redis.ping = AsyncMock(return_value=True)
