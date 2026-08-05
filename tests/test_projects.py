@@ -8,8 +8,8 @@ from httpx import ASGITransport, AsyncClient
 def patch_infra():
     with (
         patch("api.cache.get_redis_client") as mock_redis_factory,
-        patch("api.main.configure_telemetry"),
-        patch("api.main.instrument_app"),
+        patch("api.telemetry.configure_telemetry"),
+        patch("api.telemetry.instrument_app"),
     ):
         mock_redis = AsyncMock()
         mock_redis.ping = AsyncMock(return_value=True)
