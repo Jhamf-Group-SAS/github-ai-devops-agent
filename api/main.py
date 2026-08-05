@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
+import api.models  # noqa: F401 — registers all SQLAlchemy models
 from api.cache import close_redis, get_redis_client
 from api.config import get_settings
 from api.logging_config import configure_logging
