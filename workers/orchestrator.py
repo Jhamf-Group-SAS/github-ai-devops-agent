@@ -181,7 +181,4 @@ class WorkerSettings:
     retry_delay = 60
     keep_result = 3600
     queue_name = "default"
-
-    @classmethod
-    def redis_settings(cls) -> RedisSettings:
-        return _get_redis_settings()
+    redis_settings = _get_redis_settings()
