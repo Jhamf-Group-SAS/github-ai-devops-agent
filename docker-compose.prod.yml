@@ -1,14 +1,16 @@
-# Production stack for Portainer (standalone, non-Swarm)
+# Production stack for Portainer + Docker Swarm
 # Uses pre-built images from GHCR — no build step on the VM.
 #
 # Required environment variables (set in Portainer → Stack → Environment variables):
-#   IMAGE_TAG                   sha-32f9534 or latest
+#   IMAGE_TAG                   sha-9444c7f or latest
 #   POSTGRES_PASSWORD           strong password
 #   APP_SECRET_KEY              random 64-char string
 #   GITHUB_APP_ID
 #   GITHUB_WEBHOOK_SECRET
-#   GITHUB_APP_PRIVATE_KEY_B64  base64 of the .pem file  (see docs/setup.md)
+#   GITHUB_APP_PRIVATE_KEY_B64  base64 of the .pem file
 #   MINIMAX_API_KEY
+
+version: "3.8"
 
 services:
   api:
@@ -16,17 +18,6 @@ services:
     networks:
       - jhamfstack
       - internal
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.devops_api.rule=Host(`agentai.jhamf.com`)
-      - traefik.http.routers.devops_api.entrypoints=websecure
-      - traefik.http.routers.devops_api.tls.certresolver=letsencryptresolver
-      - traefik.http.routers.devops_api.priority=1
-      - traefik.http.routers.devops_api.service=devops_api
-      - traefik.http.services.devops_api.loadbalancer.server.port=8000
-      - traefik.http.services.devops_api.loadbalancer.passHostHeader=true
-      - traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=https
-      - traefik.http.routers.devops_api.middlewares=sslheader
     environment:
       APP_ENV: production
       APP_DEBUG: "false"
@@ -40,12 +31,23 @@ services:
       OTEL_ENABLED: "false"
       LOG_LEVEL: INFO
       LOG_FORMAT: json
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.devops_api.rule=Host(`agentai.jhamf.com`)
+        - traefik.http.routers.devops_api.entrypoints=websecure
+        - traefik.http.routers.devops_api.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.devops_api.priority=1
+        - traefik.http.routers.devops_api.service=devops_api
+        - traefik.http.services.devops_api.loadbalancer.server.port=8000
+        - traefik.http.services.devops_api.loadbalancer.passHostHeader=true
+        - traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=https
+        - traefik.http.routers.devops_api.middlewares=sslheader
 
   worker:
     image: ghcr.io/jhamf-group-sas/github-ai-devops-agent:${IMAGE_TAG:-latest}
@@ -63,7 +65,12 @@ services:
       OTEL_ENABLED: "false"
       LOG_LEVEL: INFO
       LOG_FORMAT: json
-    restart: unless-stopped
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
 
   db:
     image: postgres:16-alpine
@@ -80,7 +87,10 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    restart: unless-stopped
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
 
   redis:
     image: redis:7-alpine
@@ -93,7 +103,10 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    restart: unless-stopped
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
 
 volumes:
   postgres_data:
@@ -103,4 +116,4 @@ networks:
   jhamfstack:
     external: true
   internal:
-    driver: bridge
+    driver: overlay
