@@ -1,19 +1,24 @@
 """
-Thin wrapper around the Anthropic SDK.
+Thin wrapper around the MiniMax AI SDK (OpenAI-compatible endpoint).
 All agents go through here — one place to swap models or add rate limiting.
 """
 
+import os
 from functools import lru_cache
 
-import anthropic
+from openai import AsyncOpenAI
 
-DEFAULT_MODEL = "claude-sonnet-4-6"
+MINIMAX_BASE_URL = "https://api.minimax.chat/v1"
+DEFAULT_MODEL = "MiniMax-Text-01"
 MAX_TOKENS = 4096
 
 
 @lru_cache
-def get_client() -> anthropic.AsyncAnthropic:
-    return anthropic.AsyncAnthropic()  # reads ANTHROPIC_API_KEY from env
+def get_client() -> AsyncOpenAI:
+    return AsyncOpenAI(
+        api_key=os.environ["MINIMAX_API_KEY"],
+        base_url=MINIMAX_BASE_URL,
+    )
 
 
 async def ask(
@@ -23,12 +28,14 @@ async def ask(
     model: str = DEFAULT_MODEL,
     max_tokens: int = MAX_TOKENS,
 ) -> str:
-    """Send a single prompt to Claude and return the text response."""
+    """Send a single prompt to MiniMax and return the text response."""
     client = get_client()
-    message = await client.messages.create(
+    response = await client.chat.completions.create(
         model=model,
         max_tokens=max_tokens,
-        system=system,
-        messages=[{"role": "user", "content": user}],
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
     )
-    return message.content[0].text
+    return response.choices[0].message.content
