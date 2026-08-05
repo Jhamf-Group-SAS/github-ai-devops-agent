@@ -6,7 +6,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
+from sqlalchemy.ext.asyncio import create_async_engine
 
 # Make sure api package is importable
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -23,7 +23,7 @@ target_metadata = Base.metadata
 
 
 def get_url() -> str:
-    return os.environ.get("DATABASE_URL", "").replace("postgresql+asyncpg://", "postgresql://")
+    return os.environ.get("DATABASE_URL", "")
 
 
 def run_migrations_offline() -> None:
@@ -45,13 +45,9 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    cfg = config.get_section(config.config_ini_section, {})
-    cfg["sqlalchemy.url"] = get_url().replace("postgresql+asyncpg://", "postgresql://")
-    connectable = async_engine_from_config(
-        cfg,
-        prefix="sqlalchemy.",
+    connectable = create_async_engine(
+        get_url(),
         poolclass=pool.NullPool,
-        url=get_url(),
     )
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
