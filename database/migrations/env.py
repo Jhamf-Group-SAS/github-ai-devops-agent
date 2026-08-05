@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from api.database import Base
-from api.models import installation, organization, repository  # noqa: F401 — register models
+from api.models import installation, job, organization, repository  # noqa: F401 — register models
 
 config = context.config
 
