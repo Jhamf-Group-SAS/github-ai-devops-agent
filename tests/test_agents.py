@@ -17,7 +17,7 @@ def test_secret_patterns_detect_aws_key():
 
 def test_secret_patterns_detect_github_token():
     gh_pattern = next(p for _, cat, p in SECRET_PATTERNS if cat == "github_token")
-    assert gh_pattern.search("ghs_abcdefghijklmnopqrstuvwxyz012345") is not None
+    assert gh_pattern.search("ghs_abcdefghijklmnopqrstuvwxyz0123456789abcdef") is not None
 
 
 def test_secret_patterns_no_false_positive_on_placeholder():
