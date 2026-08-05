@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from workers.orchestrator import AGENT_DISPATCH, process_webhook_event
+from workers.orchestrator import ALL_AGENTS, process_webhook_event
 
 
 @pytest.fixture(autouse=True)
@@ -27,8 +27,8 @@ async def test_process_pull_request_dispatches_agents(patch_db):
         db_job_id=1,
     )
     assert result["status"] == "completed"
-    for agent in AGENT_DISPATCH["pull_request"]:
-        assert agent in result["agents"]
+    for agent in ALL_AGENTS["pull_request"]:
+        assert agent.name in result["agents"]
 
 
 @pytest.mark.anyio
@@ -47,6 +47,9 @@ async def test_process_unknown_event_completes_with_no_agents(patch_db):
 
 @pytest.mark.anyio
 async def test_agent_dispatch_map_covers_main_events():
-    assert "pull_request" in AGENT_DISPATCH
-    assert "push" in AGENT_DISPATCH
-    assert len(AGENT_DISPATCH["pull_request"]) > 0
+    assert "pull_request" in ALL_AGENTS
+    assert "push" in ALL_AGENTS
+    assert len(ALL_AGENTS["pull_request"]) > 0
+    # Verify agent names are valid strings
+    for agent in ALL_AGENTS["pull_request"]:
+        assert isinstance(agent.name, str)

@@ -1,0 +1,16 @@
+[run]
+omit =
+    # Infrastructure setup — no business logic to test
+    api/logging_config.py
+    api/telemetry.py
+    # Alembic migrations — generated code
+    database/migrations/*
+    # Queue pool — requires live Redis
+    workers/queue.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if TYPE_CHECKING:
+    raise NotImplementedError
+    \.\.\.$
