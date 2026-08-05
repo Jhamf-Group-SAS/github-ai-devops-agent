@@ -52,7 +52,7 @@ async def enqueue_webhook_event(
     logger.info(
         "Job enqueued",
         arq_job_id=job.job_id if job else None,
-        event=event_type,
+        event_type=event_type,
         delivery=delivery_id,
     )
     return job.job_id if job else ""
