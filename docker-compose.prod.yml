@@ -31,23 +31,23 @@ services:
       OTEL_ENABLED: "false"
       LOG_LEVEL: INFO
       LOG_FORMAT: json
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.devops_api.rule=Host(`agentai.jhamf.com`)
+      - traefik.http.routers.devops_api.entrypoints=websecure
+      - traefik.http.routers.devops_api.tls.certresolver=letsencryptresolver
+      - traefik.http.routers.devops_api.priority=1
+      - traefik.http.routers.devops_api.service=devops_api
+      - traefik.http.services.devops_api.loadbalancer.server.port=8000
+      - traefik.http.services.devops_api.loadbalancer.passHostHeader=true
+      - traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=https
+      - traefik.http.routers.devops_api.middlewares=sslheader
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
         delay: 5s
         max_attempts: 3
-      labels:
-        - traefik.enable=true
-        - traefik.http.routers.devops_api.rule=Host(`agentai.jhamf.com`)
-        - traefik.http.routers.devops_api.entrypoints=websecure
-        - traefik.http.routers.devops_api.tls.certresolver=letsencryptresolver
-        - traefik.http.routers.devops_api.priority=1
-        - traefik.http.routers.devops_api.service=devops_api
-        - traefik.http.services.devops_api.loadbalancer.server.port=8000
-        - traefik.http.services.devops_api.loadbalancer.passHostHeader=true
-        - traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=https
-        - traefik.http.routers.devops_api.middlewares=sslheader
 
   worker:
     image: ghcr.io/jhamf-group-sas/github-ai-devops-agent:${IMAGE_TAG:-latest}
