@@ -71,6 +71,29 @@ class GitHubAuthService:
         )
 
 
+def _load_private_key(settings) -> str:
+    """
+    Load the GitHub App private key.
+    Priority:
+      1. GITHUB_APP_PRIVATE_KEY_B64 env var (base64-encoded) — used in production/containers
+      2. File at GITHUB_APP_PRIVATE_KEY_PATH — used in local dev
+    """
+    import base64
+    import os
+
+    b64 = os.environ.get("GITHUB_APP_PRIVATE_KEY_B64", "").strip()
+    if b64:
+        return base64.b64decode(b64).decode()
+
+    key_path = Path(settings.github_app_private_key_path)
+    if not key_path.exists():
+        raise RuntimeError(
+            "GitHub App private key not found. "
+            "Set GITHUB_APP_PRIVATE_KEY_B64 or GITHUB_APP_PRIVATE_KEY_PATH."
+        )
+    return key_path.read_text()
+
+
 @lru_cache
 def get_github_auth_service() -> GitHubAuthService:
     settings = get_settings()
@@ -78,9 +101,5 @@ def get_github_auth_service() -> GitHubAuthService:
     if not settings.github_app_id:
         raise RuntimeError("GITHUB_APP_ID is not configured")
 
-    key_path = Path(settings.github_app_private_key_path)
-    if not key_path.exists():
-        raise RuntimeError(f"GitHub App private key not found at {key_path}")
-
-    private_key = key_path.read_text()
+    private_key = _load_private_key(settings)
     return GitHubAuthService(app_id=settings.github_app_id, private_key=private_key)

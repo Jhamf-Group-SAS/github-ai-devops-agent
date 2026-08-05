@@ -1,0 +1,92 @@
+# Production stack for Portainer (standalone, non-Swarm)
+# Uses pre-built images from GHCR — no build step on the VM.
+#
+# Required environment variables (set in Portainer → Stack → Environment variables):
+#   IMAGE_TAG                   sha-32f9534 or latest
+#   POSTGRES_PASSWORD           strong password
+#   APP_SECRET_KEY              random 64-char string
+#   GITHUB_APP_ID
+#   GITHUB_WEBHOOK_SECRET
+#   GITHUB_APP_PRIVATE_KEY_B64  base64 of the .pem file  (see docs/setup.md)
+#   ANTHROPIC_API_KEY
+
+services:
+  api:
+    image: ghcr.io/jhamf-group-sas/github-ai-devops-agent:${IMAGE_TAG:-latest}
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_SECRET_KEY: ${APP_SECRET_KEY}
+      DATABASE_URL: postgresql+asyncpg://devops:${POSTGRES_PASSWORD}@db:5432/devops_agent
+      REDIS_URL: redis://redis:6379/0
+      GITHUB_APP_ID: ${GITHUB_APP_ID}
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET}
+      GITHUB_APP_PRIVATE_KEY_B64: ${GITHUB_APP_PRIVATE_KEY_B64}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OTEL_ENABLED: "false"
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  worker:
+    image: ghcr.io/jhamf-group-sas/github-ai-devops-agent:${IMAGE_TAG:-latest}
+    command: arq workers.orchestrator.WorkerSettings
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql+asyncpg://devops:${POSTGRES_PASSWORD}@db:5432/devops_agent
+      REDIS_URL: redis://redis:6379/0
+      GITHUB_APP_ID: ${GITHUB_APP_ID}
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET}
+      GITHUB_APP_PRIVATE_KEY_B64: ${GITHUB_APP_PRIVATE_KEY_B64}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OTEL_ENABLED: "false"
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: devops_agent
+      POSTGRES_USER: devops
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devops -d devops_agent"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
