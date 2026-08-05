@@ -69,7 +69,7 @@ async def receive_webhook(
         else None
     )
 
-    logger.info("Webhook received", event=event, delivery=delivery, repo=repo_full_name)
+    logger.info("Webhook received", event_type=event, delivery=delivery, repo=repo_full_name)
 
     if event not in PROCESSABLE_EVENTS:
         return JSONResponse(

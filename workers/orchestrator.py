@@ -81,7 +81,7 @@ async def process_webhook_event(
     payload: dict,
     db_job_id: int,
 ) -> dict:
-    log = logger.bind(event=event_type, delivery=delivery_id, job_id=db_job_id)
+    log = logger.bind(event_type=event_type, delivery=delivery_id, job_id=db_job_id)
     log.info("Processing webhook event")
 
     webhook_events_total.labels(event=event_type).inc()
