@@ -14,8 +14,6 @@ from api.models.job import Job, JobState
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/webhook", tags=["github"])
 
-settings = get_settings()
-
 # Events that trigger agent processing
 PROCESSABLE_EVENTS = {
     "pull_request",
@@ -27,6 +25,7 @@ PROCESSABLE_EVENTS = {
 
 
 def _verify_signature(payload: bytes, signature_header: str | None) -> None:
+    settings = get_settings()
     if not settings.github_webhook_secret:
         logger.warning("Webhook secret not configured — skipping signature check")
         return
