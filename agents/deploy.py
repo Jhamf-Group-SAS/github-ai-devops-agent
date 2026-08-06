@@ -34,17 +34,14 @@ class DeployAgent(BaseAgent):
             auth = get_github_auth_service()
             token = await auth.get_installation_token(installation_id)
 
-            # Trigger the deploy workflow via workflow_dispatch
-            workflow_id = "deploy.yml"
+            # Trigger deploy via repository_dispatch (requires contents:write only)
             async with httpx.AsyncClient() as client:
                 r = await client.post(
-                    f"{GITHUB_API}/repos/{owner}/{repo_name}/actions/workflows/{workflow_id}/dispatches",
+                    f"{GITHUB_API}/repos/{owner}/{repo_name}/dispatches",
                     headers={**HEADERS, "Authorization": f"Bearer {token}"},
-                    json={"ref": default_branch},
+                    json={"event_type": "deploy", "client_payload": {"ref": default_branch}},
                     timeout=10,
                 )
-                if r.status_code == 404:
-                    return self._skip("deploy.yml workflow not found — skipping")
                 r.raise_for_status()
 
             logger.info(

@@ -13,9 +13,11 @@ on:
         description: Image tag to deploy (default: latest)
         required: false
         default: latest
+  repository_dispatch:
+    types: [deploy]
 
 concurrency:
-  group: deploy-${{ inputs.environment }}
+  group: deploy-${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'production' }}
   cancel-in-progress: false
 
 env:
@@ -24,9 +26,9 @@ env:
 
 jobs:
   deploy:
-    name: Deploy to ${{ inputs.environment }}
+    name: Deploy to ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'production' }}
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'production' }}
     permissions:
       contents: read
       packages: read
@@ -45,7 +47,11 @@ jobs:
       - name: Resolve image tag
         id: image
         run: |
-          TAG="${{ inputs.image_tag }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.image_tag }}"
+          else
+            TAG="sha-$(git rev-parse --short HEAD)"
+          fi
           if [ -z "$TAG" ] || [ "$TAG" = "latest" ]; then
             TAG="sha-$(git rev-parse --short HEAD)"
           fi
@@ -80,7 +86,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: context.sha,
-              environment: '${{ inputs.environment }}',
+              environment: '${{ github.event_name == ''workflow_dispatch'' && inputs.environment || ''production'' }}',
               auto_merge: false,
               required_contexts: [],
             });
