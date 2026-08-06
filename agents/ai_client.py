@@ -8,8 +8,8 @@ from functools import lru_cache
 
 from openai import AsyncOpenAI
 
-MINIMAX_BASE_URL = "https://api.minimax.chat/v1"
-DEFAULT_MODEL = "MiniMax-Text-01"
+MINIMAX_BASE_URL = "https://api.minimax.io/v1"
+DEFAULT_MODEL = "MiniMax-M3"
 MAX_TOKENS = 4096
 
 
